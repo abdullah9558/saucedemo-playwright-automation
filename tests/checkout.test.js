@@ -1,12 +1,16 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { chromium } = require('playwright');
 const config = require('../playwright.config');
 
 test('standard user can buy one selected product', { timeout: config.timeout }, async () => {
-  const browser = await chromium.launch({ headless: config.headless });
+  const browser = await chromium.launch({
+    headless: config.headless,
+    slowMo: config.slowMo
+  });
   const context = await browser.newContext();
   const page = await context.newPage();
   try {
@@ -37,16 +41,25 @@ test('standard user can buy one selected product', { timeout: config.timeout }, 
     assert.equal(await page.locator('[data-test="complete-header"]').innerText(), 'Thank you for your order!');
     assert.equal(await page.locator('[data-test="shopping-cart-badge"]').count(), 0);
 
-    const downloadPromise = page.waitForEvent('download');
-    await page.locator('[data-test="generate-pdf-order"]').click();
-    const download = await downloadPromise;
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('[data-test="generate-pdf-order"]').click()
+    ]);
     const filename = download.suggestedFilename();
     assert.match(filename, /\.pdf$/i, 'Order download should be a PDF');
-    const downloadDir = path.resolve('downloads');
+    const downloadDir = path.join(os.homedir(), 'Downloads');
     fs.mkdirSync(downloadDir, { recursive: true });
     const savedPdf = path.join(downloadDir, filename);
+    const downloadError = await download.failure();
+    assert.equal(downloadError, null, `PDF download failed: ${downloadError}`);
     await download.saveAs(savedPdf);
-    assert.ok(fs.statSync(savedPdf).size > 0, 'Downloaded order PDF should not be empty');
+    const pdfStats = await fs.promises.stat(savedPdf);
+    assert.ok(pdfStats.size > 0, 'Downloaded order PDF should not be empty');
+    console.log(`PDF saved successfully: ${savedPdf}`);
+
+    if (!config.headless) {
+      await page.waitForTimeout(3_000);
+    }
 
   } catch (error) {
     await page.screenshot({ path: 'checkout-failure.png', fullPage: true });
