@@ -8,7 +8,8 @@ const result = spawnSync(
     stdio: 'inherit',
     env: {
       ...process.env,
-      HEADED: '1'
+      HEADED: '1',
+      SLOW_MO: process.env.SLOW_MO || '800'
     }
   }
 );
