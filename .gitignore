@@ -1,0 +1,6 @@
+node_modules/
+checkout-failure.png
+downloads/
+evidence/
+debug.log
+npm-debug.log*
