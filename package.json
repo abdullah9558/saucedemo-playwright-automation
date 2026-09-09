@@ -1,0 +1,12 @@
+{
+  "name": "saucedemo-sqa-assessment",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/checkout.test.js",
+    "test:headed": "node scripts/run-headed.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
+}
